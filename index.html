@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Ledger</title>
+    
+    <!-- PWA Installation Tags -->
+    <meta name="theme-color" content="#217346">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+        body { font-family: Arial, sans-serif; margin: 16px; font-size: 14px; background-color: #fff; }
+        h3 { margin-bottom: 10px; margin-top: 30px; color: #333; }
+        h3:first-child { margin-top: 0; }
+        
+        /* Excel Table Styles */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; min-width: 600px; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #a0a0a0; padding: 6px 10px; text-align: left; }
+        th { background-color: #e1e1e1; font-weight: bold; color: #333; }
+        
+        /* Inputs matching cell size */
+        input, select { width: 100%; box-sizing: border-box; border: 1px solid #ccc; padding: 6px; font-size: 14px; }
+        input:focus, select:focus { border: 2px solid #217346; outline: none; }
+        
+        .amt { text-align: right; }
+        button { cursor: pointer; padding: 6px 12px; background: #f3f3f3; border: 1px solid #a0a0a0; font-size: 14px; }
+        button:hover { background: #e1e1e1; }
+        .btn-add { background: #217346; color: white; border: none; font-weight: bold; width: 100%; }
+        .btn-add:hover { background: #1a5c38; }
+        .btn-del { color: #d32f2f; border: none; background: transparent; font-weight: bold; padding: 4px; }
+    </style>
+</head>
+<body>
+
+    <h3>1. Master Accounts & Balances</h3>
+    <div class="table-container">
+        <table id="accountsTable">
+            <thead>
+                <tr>
+                    <th width="30%">Account / Instrument</th>
+                    <th width="25%">Opening Balance (₹)</th>
+                    <th width="25%">Current Live Balance (₹)</th>
+                    <th width="20%">Action</th>
+                </tr>
+            </thead>
+            <tbody id="accountsBody"></tbody>
+            <tfoot>
+                <tr>
+                    <td><input type="text" id="newAccName" placeholder="e.g. SBI, Cash" autocomplete="off"></td>
+                    <td><input type="number" id="newAccBal" placeholder="0" class="amt" step="any"></td>
+                    <td class="amt">-</td>
+                    <td><button class="btn-add" onclick="addAccount()">Add Account</button></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <h3>2. Daily Ledger (Transaction Sheet)</h3>
+    <div class="table-container">
+        <table id="ledgerTable">
+            <thead>
+                <tr>
+                    <th width="15%">Date</th>
+                    <th width="30%">Purpose / Narration</th>
+                    <th width="15%">Account</th>
+                    <th width="15%" class="amt">Money In (+)</th>
+                    <th width="15%" class="amt">Money Out (-)</th>
+                    <th width="10%">Action</th>
+                </tr>
+                <!-- Data Entry Row frozen at top -->
+                <tr style="background-color: #f9f9f9;">
+                    <td><input type="date" id="entryDate"></td>
+                    <td><input type="text" id="entryPurpose" placeholder="Type here..." autocomplete="off"></td>
+                    <td><select id="entryAccount"></select></td>
+                    <td><input type="number" id="entryIn" placeholder="0" class="amt" step="any"></td>
+                    <td><input type="number" id="entryOut" placeholder="0" class="amt" step="any"></td>
+                    <td><button class="btn-add" onclick="addTransaction()">Save Row</button></td>
+                </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Set today's date in the entry row
+        document.getElementById('entryDate').valueAsDate = new Date();
+
+        function loadData() {
+            let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
+            let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
+            
+            // 1. Render Accounts & Calculate Live Balances
+            const accBody = document.getElementById('accountsBody');
+            const accSelect = document.getElementById('entryAccount');
+            accBody.innerHTML = '';
+            accSelect.innerHTML = '';
+
+            accounts.forEach((acc, index) => {
+                // Calculate live balance
+                let liveBal = parseFloat(acc.openingBalance);
+                txns.filter(t => t.account === acc.name).forEach(t => {
+                    liveBal += parseFloat(t.moneyIn || 0);
+                    liveBal -= parseFloat(t.moneyOut || 0);
+                });
+
+                // Add to Accounts Table
+                accBody.innerHTML += `
+                    <tr>
+                        <td>${acc.name}</td>
+                        <td class="amt">${parseFloat(acc.openingBalance).toLocaleString('en-IN')}</td>
+                        <td class="amt" style="font-weight:bold; color: ${liveBal < 0 ? '#d32f2f' : '#333'}">${liveBal.toLocaleString('en-IN')}</td>
+                        <td><button class="btn-del" onclick="deleteAccount(${index})">Delete</button></td>
+                    </tr>
+                `;
+
+                // Add to Dropdown
+                accSelect.innerHTML += `<option value="${acc.name}">${acc.name}</option>`;
+            });
+
+            // 2. Render Transaction Sheet
+            const ledgerBody = document.getElementById('ledgerBody');
+            ledgerBody.innerHTML = '';
+
+            // Show newest on top
+            let sortedTxns = [...txns].reverse(); 
+            sortedTxns.forEach((t) => {
+                // Find original index for deletion
+                let originalIndex = txns.indexOf(t); 
+                
+                // Format date cleanly
+                let dateObj = new Date(t.date);
+                let dateStr = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                ledgerBody.innerHTML += `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>${t.purpose}</td>
+                        <td>${t.account}</td>
+                        <td class="amt">${t.moneyIn ? parseFloat(t.moneyIn).toLocaleString('en-IN') : '-'}</td>
+                        <td class="amt">${t.moneyOut ? parseFloat(t.moneyOut).toLocaleString('en-IN') : '-'}</td>
+                        <td><button class="btn-del" onclick="deleteTransaction(${originalIndex})">Del</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function addAccount() {
+            let name = document.getElementById('newAccName').value.trim();
+            let bal = document.getElementById('newAccBal').value || 0;
+            
+            if (!name) return alert("Enter account name");
+
+            let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
+            
+            // Check for duplicate names to avoid breaking the ledger calculations
+            if (accounts.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+                return alert("An account with this name already exists.");
+            }
+
+            accounts.push({ name: name, openingBalance: bal });
+            localStorage.setItem('xls_accounts', JSON.stringify(accounts));
+            
+            document.getElementById('newAccName').value = '';
+            document.getElementById('newAccBal').value = '';
+            loadData();
+        }
+
+        function deleteAccount(index) {
+            let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
+            let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
+            
+            let accName = accounts[index].name;
+            if (txns.some(t => t.account === accName)) {
+                return alert("Cannot delete. This account has transactions in the ledger.");
+            }
+
+            accounts.splice(index, 1);
+            localStorage.setItem('xls_accounts', JSON.stringify(accounts));
+            loadData();
+        }
+
+        function addTransaction() {
+            let date = document.getElementById('entryDate').value;
+            let purpose = document.getElementById('entryPurpose').value.trim();
+            let account = document.getElementById('entryAccount').value;
+            let mIn = document.getElementById('entryIn').value || 0;
+            let mOut = document.getElementById('entryOut').value || 0;
+
+            if (!account) return alert("Create an account first!");
+            if (mIn == 0 && mOut == 0) return alert("Enter money in or money out");
+
+            let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
+            txns.push({
+                date: date,
+                purpose: purpose,
+                account: account,
+                moneyIn: parseFloat(mIn),
+                moneyOut: parseFloat(mOut)
+            });
+
+            localStorage.setItem('xls_txns', JSON.stringify(txns));
+
+            // Clear entry inputs like Excel
+            document.getElementById('entryPurpose').value = '';
+            document.getElementById('entryIn').value = '';
+            document.getElementById('entryOut').value = '';
+            loadData();
+        }
+
+        function deleteTransaction(index) {
+            if(!confirm("Delete this row?")) return;
+            let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
+            txns.splice(index, 1);
+            localStorage.setItem('xls_txns', JSON.stringify(txns));
+            loadData();
+        }
+
+        // Run on startup
+        loadData();
+    </script>
+</body>
+</html>
