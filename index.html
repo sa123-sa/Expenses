@@ -17,8 +17,8 @@
         h3:first-child { margin-top: 0; }
         
         /* Excel Table Styles */
-        .table-container { overflow-x: auto; }
-        table { width: 100%; min-width: 600px; border-collapse: collapse; margin-bottom: 20px; }
+        .table-container { overflow-x: auto; margin-bottom: 20px; }
+        table { width: 100%; min-width: 650px; border-collapse: collapse; margin-bottom: 20px; }
         th, td { border: 1px solid #a0a0a0; padding: 6px 10px; text-align: left; }
         th { background-color: #e1e1e1; font-weight: bold; color: #333; }
         
@@ -31,7 +31,30 @@
         button:hover { background: #e1e1e1; }
         .btn-add { background: #217346; color: white; border: none; font-weight: bold; width: 100%; }
         .btn-add:hover { background: #1a5c38; }
-        .btn-del { color: #d32f2f; border: none; background: transparent; font-weight: bold; padding: 4px; }
+        
+        /* Action Buttons */
+        .action-btns { display: flex; gap: 5px; }
+        .btn-del { color: #d32f2f; border: 1px solid #d32f2f; background: transparent; font-weight: bold; padding: 4px 8px; border-radius: 3px; flex: 1; }
+        .btn-del:hover { background: #ffebee; }
+        .btn-edit { color: #1976d2; border: 1px solid #1976d2; background: transparent; font-weight: bold; padding: 4px 8px; border-radius: 3px; flex: 1; }
+        .btn-edit:hover { background: #e3f2fd; }
+
+        /* Month-wise Summary Styles */
+        .month-card { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 4px; background-color: #fff; }
+        .month-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; cursor: pointer; background-color: #f9f9f9; -webkit-tap-highlight-color: transparent; }
+        .month-header:hover { background-color: #f1f1f1; }
+        .month-title { font-weight: bold; flex: 1; color: #333; font-size: 15px; }
+        .month-totals { font-size: 13px; text-align: right; margin-right: 15px; }
+        .debit-text { color: #d32f2f; margin-right: 10px; font-weight: bold; }
+        .credit-text { color: #217346; font-weight: bold; }
+        .details-btn { color: #007bff; font-size: 13px; font-weight: bold; display: flex; align-items: center; }
+        .arrow { margin-left: 5px; font-size: 10px; transition: transform 0.3s; }
+        .arrow.down { transform: rotate(180deg); }
+        .month-details { display: none; padding: 0 12px; border-top: 1px solid #ccc; background-color: #fafafa; }
+        .month-details.active { display: block; }
+        .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; font-size: 13px; }
+        .txn-item:last-child { border-bottom: none; }
+        .txn-info { color: #555; }
     </style>
 </head>
 <body>
@@ -65,11 +88,11 @@
             <thead>
                 <tr>
                     <th width="15%">Date</th>
-                    <th width="30%">Purpose / Narration</th>
+                    <th width="25%">Purpose / Narration</th>
                     <th width="15%">Account</th>
                     <th width="15%" class="amt">Money In (+)</th>
                     <th width="15%" class="amt">Money Out (-)</th>
-                    <th width="10%">Action</th>
+                    <th width="15%">Action</th>
                 </tr>
                 <!-- Data Entry Row frozen at top -->
                 <tr style="background-color: #f9f9f9;">
@@ -78,15 +101,22 @@
                     <td><select id="entryAccount"></select></td>
                     <td><input type="number" id="entryIn" placeholder="0" class="amt" step="any"></td>
                     <td><input type="number" id="entryOut" placeholder="0" class="amt" step="any"></td>
-                    <td><button class="btn-add" onclick="addTransaction()">Save Row</button></td>
+                    <td><button id="saveTxnBtn" class="btn-add" onclick="saveTransaction()">Save Row</button></td>
                 </tr>
             </thead>
             <tbody id="ledgerBody"></tbody>
         </table>
     </div>
 
+    <h3>3. Month-wise Summary</h3>
+    <div id="monthWiseContainer">
+        <!-- Monthly accordion cards will generate here -->
+    </div>
+
     <script>
-        // Set today's date in the entry row
+        let editTxnIndex = -1; // Global tracker for transaction editing
+
+        // Set today's date in the entry row initially
         document.getElementById('entryDate').valueAsDate = new Date();
 
         function loadData() {
@@ -100,24 +130,26 @@
             accSelect.innerHTML = '';
 
             accounts.forEach((acc, index) => {
-                // Calculate live balance
                 let liveBal = parseFloat(acc.openingBalance);
                 txns.filter(t => t.account === acc.name).forEach(t => {
                     liveBal += parseFloat(t.moneyIn || 0);
                     liveBal -= parseFloat(t.moneyOut || 0);
                 });
 
-                // Add to Accounts Table
                 accBody.innerHTML += `
                     <tr>
                         <td>${acc.name}</td>
                         <td class="amt">${parseFloat(acc.openingBalance).toLocaleString('en-IN')}</td>
                         <td class="amt" style="font-weight:bold; color: ${liveBal < 0 ? '#d32f2f' : '#333'}">${liveBal.toLocaleString('en-IN')}</td>
-                        <td><button class="btn-del" onclick="deleteAccount(${index})">Delete</button></td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn-edit" onclick="editAccountBalance(${index})">Edit</button>
+                                <button class="btn-del" onclick="deleteAccount(${index})">Del</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
 
-                // Add to Dropdown
                 accSelect.innerHTML += `<option value="${acc.name}">${acc.name}</option>`;
             });
 
@@ -125,13 +157,9 @@
             const ledgerBody = document.getElementById('ledgerBody');
             ledgerBody.innerHTML = '';
 
-            // Show newest on top
             let sortedTxns = [...txns].reverse(); 
             sortedTxns.forEach((t) => {
-                // Find original index for deletion
                 let originalIndex = txns.indexOf(t); 
-                
-                // Format date cleanly
                 let dateObj = new Date(t.date);
                 let dateStr = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -140,14 +168,98 @@
                         <td>${dateStr}</td>
                         <td>${t.purpose}</td>
                         <td>${t.account}</td>
-                        <td class="amt">${t.moneyIn ? parseFloat(t.moneyIn).toLocaleString('en-IN') : '-'}</td>
-                        <td class="amt">${t.moneyOut ? parseFloat(t.moneyOut).toLocaleString('en-IN') : '-'}</td>
-                        <td><button class="btn-del" onclick="deleteTransaction(${originalIndex})">Del</button></td>
+                        <td class="amt">${parseFloat(t.moneyIn || 0) > 0 ? parseFloat(t.moneyIn).toLocaleString('en-IN') : '-'}</td>
+                        <td class="amt">${parseFloat(t.moneyOut || 0) > 0 ? parseFloat(t.moneyOut).toLocaleString('en-IN') : '-'}</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn-edit" onclick="loadTransactionForEdit(${originalIndex})">Edit</button>
+                                <button class="btn-del" onclick="deleteTransaction(${originalIndex})">Del</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             });
+
+            // 3. Render Month-wise Summary
+            renderMonthlySummary(txns);
         }
 
+        function renderMonthlySummary(txns) {
+            const container = document.getElementById('monthWiseContainer');
+            container.innerHTML = '';
+
+            if (txns.length === 0) {
+                container.innerHTML = '<p style="color: #777; padding-left: 5px;">No transactions recorded yet.</p>';
+                return;
+            }
+
+            const groupedData = {};
+
+            txns.forEach(t => {
+                const dateObj = new Date(t.date);
+                const monthKey = dateObj.toLocaleString('en-IN', { month: 'short', year: 'numeric' }); 
+                
+                if (!groupedData[monthKey]) {
+                    groupedData[monthKey] = { debit: 0, credit: 0, transactions: [] };
+                }
+                
+                groupedData[monthKey].credit += parseFloat(t.moneyIn || 0);
+                groupedData[monthKey].debit += parseFloat(t.moneyOut || 0);
+                groupedData[monthKey].transactions.push(t);
+            });
+
+            for (const [month, data] of Object.entries(groupedData).reverse()) {
+                const card = document.createElement('div');
+                card.className = 'month-card';
+
+                const header = document.createElement('div');
+                header.className = 'month-header';
+                header.innerHTML = `
+                    <div class="month-title">${month}</div>
+                    <div class="month-totals">
+                        <span class="debit-text">Dr: ₹${data.debit.toLocaleString('en-IN')}</span>
+                        <span class="credit-text">Cr: ₹${data.credit.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div class="details-btn">
+                        Details <span class="arrow">▼</span>
+                    </div>
+                `;
+
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'month-details';
+
+                let detailsHtml = '';
+                let monthTxns = [...data.transactions].reverse();
+                
+                monthTxns.forEach(t => {
+                    const dateStr = new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+                    const isDebit = parseFloat(t.moneyOut || 0) > 0;
+                    const amount = isDebit ? t.moneyOut : t.moneyIn;
+                    const color = isDebit ? '#d32f2f' : '#217346';
+                    const sign = isDebit ? '-' : '+';
+                    
+                    detailsHtml += `
+                        <div class="txn-item">
+                            <span class="txn-info">${dateStr} | ${t.purpose} (${t.account})</span>
+                            <span style="color: ${color}; font-weight: bold;">${sign}₹${parseFloat(amount).toLocaleString('en-IN')}</span>
+                        </div>
+                    `;
+                });
+                
+                detailsDiv.innerHTML = detailsHtml;
+
+                header.addEventListener('click', () => {
+                    detailsDiv.classList.toggle('active');
+                    header.querySelector('.arrow').classList.toggle('down');
+                });
+
+                card.appendChild(header);
+                card.appendChild(detailsDiv);
+                container.appendChild(card);
+            }
+        }
+
+        /* --- Account Functions --- */
         function addAccount() {
             let name = document.getElementById('newAccName').value.trim();
             let bal = document.getElementById('newAccBal').value || 0;
@@ -156,7 +268,6 @@
 
             let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
             
-            // Check for duplicate names to avoid breaking the ledger calculations
             if (accounts.some(a => a.name.toLowerCase() === name.toLowerCase())) {
                 return alert("An account with this name already exists.");
             }
@@ -169,6 +280,19 @@
             loadData();
         }
 
+        function editAccountBalance(index) {
+            let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
+            let acc = accounts[index];
+            
+            let newBal = prompt(`Enter new opening balance for ${acc.name}:`, acc.openingBalance);
+            
+            if (newBal !== null && newBal.trim() !== "") {
+                acc.openingBalance = parseFloat(newBal);
+                localStorage.setItem('xls_accounts', JSON.stringify(accounts));
+                loadData();
+            }
+        }
+
         function deleteAccount(index) {
             let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
             let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
@@ -178,12 +302,33 @@
                 return alert("Cannot delete. This account has transactions in the ledger.");
             }
 
+            if(!confirm(`Delete account: ${accName}?`)) return;
+
             accounts.splice(index, 1);
             localStorage.setItem('xls_accounts', JSON.stringify(accounts));
             loadData();
         }
 
-        function addTransaction() {
+        /* --- Transaction Functions --- */
+        function loadTransactionForEdit(index) {
+            let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
+            let t = txns[index];
+
+            document.getElementById('entryDate').value = t.date;
+            document.getElementById('entryPurpose').value = t.purpose;
+            document.getElementById('entryAccount').value = t.account;
+            document.getElementById('entryIn').value = t.moneyIn || '';
+            document.getElementById('entryOut').value = t.moneyOut || '';
+
+            editTxnIndex = index;
+            
+            let saveBtn = document.getElementById('saveTxnBtn');
+            saveBtn.innerText = 'Update Row';
+            saveBtn.style.backgroundColor = '#1976d2';
+            window.scrollTo({ top: document.getElementById('ledgerTable').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function saveTransaction() {
             let date = document.getElementById('entryDate').value;
             let purpose = document.getElementById('entryPurpose').value.trim();
             let account = document.getElementById('entryAccount').value;
@@ -194,20 +339,34 @@
             if (mIn == 0 && mOut == 0) return alert("Enter money in or money out");
 
             let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
-            txns.push({
+            
+            let newTxnData = {
                 date: date,
                 purpose: purpose,
                 account: account,
                 moneyIn: parseFloat(mIn),
                 moneyOut: parseFloat(mOut)
-            });
+            };
+
+            if (editTxnIndex >= 0) {
+                // Update existing row
+                txns[editTxnIndex] = newTxnData;
+                editTxnIndex = -1; // Reset tracker
+                
+                let saveBtn = document.getElementById('saveTxnBtn');
+                saveBtn.innerText = 'Save Row';
+                saveBtn.style.backgroundColor = '#217346';
+            } else {
+                // Add new row
+                txns.push(newTxnData);
+            }
 
             localStorage.setItem('xls_txns', JSON.stringify(txns));
 
-            // Clear entry inputs like Excel
             document.getElementById('entryPurpose').value = '';
             document.getElementById('entryIn').value = '';
             document.getElementById('entryOut').value = '';
+            document.getElementById('entryDate').valueAsDate = new Date();
             loadData();
         }
 
@@ -216,6 +375,19 @@
             let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
             txns.splice(index, 1);
             localStorage.setItem('xls_txns', JSON.stringify(txns));
+            
+            // If deleting the row currently being edited, reset the form
+            if(editTxnIndex === index) {
+                editTxnIndex = -1;
+                document.getElementById('entryPurpose').value = '';
+                document.getElementById('entryIn').value = '';
+                document.getElementById('entryOut').value = '';
+                document.getElementById('entryDate').valueAsDate = new Date();
+                let saveBtn = document.getElementById('saveTxnBtn');
+                saveBtn.innerText = 'Save Row';
+                saveBtn.style.backgroundColor = '#217346';
+            }
+
             loadData();
         }
 
