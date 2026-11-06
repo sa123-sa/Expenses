@@ -12,176 +12,216 @@
     <link rel="manifest" href="manifest.json">
 
     <style>
-        body { font-family: Arial, sans-serif; margin: 16px; font-size: 14px; background-color: #fff; }
-        h3 { margin-bottom: 10px; margin-top: 30px; color: #333; }
+        body { font-family: Arial, sans-serif; margin: 16px; font-size: 14px; background-color: #f4f6f8; color: #333; }
+        h3 { margin-bottom: 12px; margin-top: 25px; color: #217346; border-bottom: 2px solid #217346; padding-bottom: 5px; display: inline-block; }
         h3:first-child { margin-top: 0; }
         
-        /* Excel Table Styles */
-        .table-container { overflow-x: auto; margin-bottom: 20px; }
-        table { width: 100%; min-width: 650px; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #a0a0a0; padding: 6px 10px; text-align: left; }
-        th { background-color: #e1e1e1; font-weight: bold; color: #333; }
+        /* Tables */
+        .table-container { overflow-x: auto; margin-bottom: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; min-width: 650px; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+        th { background-color: #f9fafb; font-weight: bold; color: #555; font-size: 13px; text-transform: uppercase; }
         
-        /* Inputs matching cell size */
-        input, select { width: 100%; box-sizing: border-box; border: 1px solid #ccc; padding: 6px; font-size: 14px; }
-        input:focus, select:focus { border: 2px solid #217346; outline: none; }
+        /* Compact Two-Line Form Inputs */
+        .entry-form { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: grid; grid-template-columns: 140px 1fr 140px; gap: 10px; margin-bottom: 25px; }
+        .form-row-bottom { display: grid; grid-template-columns: 1fr 1fr 120px; gap: 10px; grid-column: span 3; align-items: end; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        .input-group label { font-size: 11px; font-weight: bold; color: #777; }
+        input, select { width: 100%; box-sizing: border-box; border: 1px solid #ccc; padding: 6px; font-size: 13px; border-radius: 4px; }
+        input:focus, select:focus { border: 1px solid #217346; outline: none; box-shadow: 0 0 3px rgba(33,115,70,0.3); }
         
         .amt { text-align: right; }
-        button { cursor: pointer; padding: 6px 12px; background: #f3f3f3; border: 1px solid #a0a0a0; font-size: 14px; }
-        button:hover { background: #e1e1e1; }
-        .btn-add { background: #217346; color: white; border: none; font-weight: bold; width: 100%; }
+        
+        /* Buttons */
+        button { cursor: pointer; padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; border: none; transition: 0.2s; }
+        .btn-add { background: #217346; color: white; width: 100%; padding: 8px; }
         .btn-add:hover { background: #1a5c38; }
         
-        /* Action Buttons */
-        .action-btns { display: flex; gap: 5px; }
-        .btn-del { color: #d32f2f; border: 1px solid #d32f2f; background: transparent; font-weight: bold; padding: 4px 8px; border-radius: 3px; flex: 1; }
-        .btn-del:hover { background: #ffebee; }
-        .btn-edit { color: #1976d2; border: 1px solid #1976d2; background: transparent; font-weight: bold; padding: 4px 8px; border-radius: 3px; flex: 1; }
-        .btn-edit:hover { background: #e3f2fd; }
+        .action-btns { display: flex; gap: 4px; justify-content: flex-end; }
+        .btn-del { color: #d32f2f; background: #ffebee; padding: 4px 8px; font-size: 12px; }
+        .btn-edit { color: #1976d2; background: #e3f2fd; padding: 4px 8px; font-size: 12px; }
+        .btn-details { color: #007bff; background: #f0f7ff; padding: 4px 8px; font-size: 12px; border: 1px solid #bfe3ff; }
 
-        /* Month-wise Summary Styles */
-        .month-card { border: 1px solid #ccc; margin-bottom: 10px; border-radius: 4px; background-color: #fff; }
-        .month-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; cursor: pointer; background-color: #f9f9f9; -webkit-tap-highlight-color: transparent; }
-        .month-header:hover { background-color: #f1f1f1; }
+        /* Month-wise Summary Accordion */
+        .month-card { border: none; margin-bottom: 15px; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); overflow: hidden; }
+        .month-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; background-color: #fff; -webkit-tap-highlight-color: transparent; }
+        .month-header:hover { background-color: #f9fafb; }
         .month-title { font-weight: bold; flex: 1; color: #333; font-size: 15px; }
         .month-totals { font-size: 13px; text-align: right; margin-right: 15px; }
         .debit-text { color: #d32f2f; margin-right: 10px; font-weight: bold; }
         .credit-text { color: #217346; font-weight: bold; }
-        .details-btn { color: #007bff; font-size: 13px; font-weight: bold; display: flex; align-items: center; }
+        .details-btn { color: #007bff; font-size: 13px; font-weight: bold; display: flex; align-items: center; background: #f0f7ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #bfe3ff; }
         .arrow { margin-left: 5px; font-size: 10px; transition: transform 0.3s; }
         .arrow.down { transform: rotate(180deg); }
-        .month-details { display: none; padding: 0 12px; border-top: 1px solid #ccc; background-color: #fafafa; }
+        .month-details { display: none; padding: 0; border-top: 1px solid #eee; background-color: #fafafa; }
         .month-details.active { display: block; }
-        .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; font-size: 13px; }
+        
+        .txn-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px dashed #ddd; font-size: 13px; gap: 10px; }
         .txn-item:last-child { border-bottom: none; }
-        .txn-info { color: #555; }
+        .txn-main { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
+        .txn-date-acc { font-size: 11px; color: #777; font-weight: bold; text-transform: uppercase; }
+        .txn-purpose { color: #333; font-size: 14px; }
+        .txn-amount-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+        /* Nested Accounts Details */
+        .acc-details { display: none; padding: 10px 15px; background-color: #fff; border-top: 1px solid #eee; }
+        .acc-details.active { display: block; }
+        .acc-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+        .acc-item:last-child { border-bottom: none; }
+
+        @media (max-width: 650px) {
+            .entry-form { grid-template-columns: 1fr; }
+            .form-row-bottom { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
-    <h3>1. Master Accounts & Balances</h3>
+    <h3>1. Accounts Summary</h3>
     <div class="table-container">
         <table id="accountsTable">
             <thead>
                 <tr>
-                    <th width="30%">Account / Instrument</th>
-                    <th width="25%">Opening Balance (₹)</th>
-                    <th width="25%">Current Live Balance (₹)</th>
-                    <th width="20%">Action</th>
+                    <th width="25%">Account</th>
+                    <th width="20%" class="amt">Opening (₹)</th>
+                    <th width="20%" class="amt">Total Spend (₹)</th>
+                    <th width="20%" class="amt">Live Balance (₹)</th>
+                    <th width="15%" style="text-align:right;">Action</th>
                 </tr>
             </thead>
-            <tbody id="accountsBody"></tbody>
+            <tbody id="accountsSummaryBody">
+                <!-- Grand Total Row and Expandable Details injected here -->
+            </tbody>
+            <tbody id="accountsBody" style="display:none;">
+                <!-- Individual accounts will be structured inside the toggleable details -->
+            </tbody>
             <tfoot>
-                <tr>
-                    <td><input type="text" id="newAccName" placeholder="e.g. SBI, Cash" autocomplete="off"></td>
-                    <td><input type="number" id="newAccBal" placeholder="0" class="amt" step="any"></td>
-                    <td class="amt">-</td>
-                    <td><button class="btn-add" onclick="addAccount()">Add Account</button></td>
+                <tr style="background: #f9fafb;">
+                    <td><input type="text" id="newAccName" placeholder="e.g. SBI, Cash" autocomplete="off" style="padding:4px;"></td>
+                    <td><input type="number" id="newAccBal" placeholder="0" class="amt" step="any" style="padding:4px;"></td>
+                    <td colspan="3" style="text-align:right;"><button class="btn-add" onclick="addAccount()" style="padding:6px; width:auto;">+ Add Account</button></td>
                 </tr>
             </tfoot>
         </table>
     </div>
 
-    <h3>2. Daily Ledger (Transaction Sheet)</h3>
-    <div class="table-container">
-        <table id="ledgerTable">
-            <thead>
-                <tr>
-                    <th width="15%">Date</th>
-                    <th width="25%">Purpose / Narration</th>
-                    <th width="15%">Account</th>
-                    <th width="15%" class="amt">Money In (+)</th>
-                    <th width="15%" class="amt">Money Out (-)</th>
-                    <th width="15%">Action</th>
-                </tr>
-                <!-- Data Entry Row frozen at top -->
-                <tr style="background-color: #f9f9f9;">
-                    <td><input type="date" id="entryDate"></td>
-                    <td><input type="text" id="entryPurpose" placeholder="Type here..." autocomplete="off"></td>
-                    <td><select id="entryAccount"></select></td>
-                    <td><input type="number" id="entryIn" placeholder="0" class="amt" step="any"></td>
-                    <td><input type="number" id="entryOut" placeholder="0" class="amt" step="any"></td>
-                    <td><button id="saveTxnBtn" class="btn-add" onclick="saveTransaction()">Save Row</button></td>
-                </tr>
-            </thead>
-            <tbody id="ledgerBody"></tbody>
-        </table>
+    <h3>2. Add Transaction</h3>
+    <div class="entry-form" id="entryFormSection">
+        <div class="input-group">
+            <label>Date</label>
+            <input type="date" id="entryDate">
+        </div>
+        <div class="input-group">
+            <label>Purpose / Narration</label>
+            <input type="text" id="entryPurpose" placeholder="What was this for?" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label>Account</label>
+            <select id="entryAccount"></select>
+        </div>
+        <div class="form-row-bottom">
+            <div class="input-group">
+                <label>Money IN (+)</label>
+                <input type="number" id="entryIn" placeholder="0" class="amt" step="any">
+            </div>
+            <div class="input-group">
+                <label>Money OUT (-)</label>
+                <input type="number" id="entryOut" placeholder="0" class="amt" step="any">
+            </div>
+            <div class="input-group">
+                <button id="saveTxnBtn" class="btn-add" onclick="saveTransaction()">Save Row</button>
+            </div>
+        </div>
     </div>
 
-    <h3>3. Month-wise Summary</h3>
+    <h3>3. Ledger & Monthly Summary</h3>
     <div id="monthWiseContainer">
         <!-- Monthly accordion cards will generate here -->
     </div>
 
     <script>
-        let editTxnIndex = -1; // Global tracker for transaction editing
+        let editTxnIndex = -1; 
 
-        // Set today's date in the entry row initially
         document.getElementById('entryDate').valueAsDate = new Date();
 
         function loadData() {
             let accounts = JSON.parse(localStorage.getItem('xls_accounts')) || [];
             let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
             
-            // 1. Render Accounts & Calculate Live Balances
-            const accBody = document.getElementById('accountsBody');
+            let grandTotalOpening = 0;
+            let grandTotalSpend = 0;
+            let grandTotalLive = 0;
+
+            const accSummaryBody = document.getElementById('accountsSummaryBody');
             const accSelect = document.getElementById('entryAccount');
-            accBody.innerHTML = '';
             accSelect.innerHTML = '';
 
+            let individualAccountsHtml = '';
+
             accounts.forEach((acc, index) => {
-                let liveBal = parseFloat(acc.openingBalance);
+                let opBal = parseFloat(acc.openingBalance || 0);
+                let liveBal = opBal;
+                let accSpend = 0;
+
                 txns.filter(t => t.account === acc.name).forEach(t => {
                     liveBal += parseFloat(t.moneyIn || 0);
-                    liveBal -= parseFloat(t.moneyOut || 0);
+                    let out = parseFloat(t.moneyOut || 0);
+                    liveBal -= out;
+                    accSpend += out;
                 });
 
-                accBody.innerHTML += `
-                    <tr>
-                        <td>${acc.name}</td>
-                        <td class="amt">${parseFloat(acc.openingBalance).toLocaleString('en-IN')}</td>
-                        <td class="amt" style="font-weight:bold; color: ${liveBal < 0 ? '#d32f2f' : '#333'}">${liveBal.toLocaleString('en-IN')}</td>
-                        <td>
-                            <div class="action-btns">
+                grandTotalOpening += opBal;
+                grandTotalSpend += accSpend;
+                grandTotalLive += liveBal;
+
+                individualAccountsHtml += `
+                    <div class="acc-item">
+                        <div>
+                            <strong>${acc.name}</strong><br>
+                            <span style="font-size:11px; color:#777;">Op: ₹${opBal.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span>Spend: ₹${accSpend.toLocaleString('en-IN')} | Live: <strong style="color: ${liveBal < 0 ? '#d32f2f' : '#217346'};">₹${liveBal.toLocaleString('en-IN')}</strong></span>
+                            <div class="action-btns" style="margin-top:4px;">
                                 <button class="btn-edit" onclick="editAccountBalance(${index})">Edit</button>
                                 <button class="btn-del" onclick="deleteAccount(${index})">Del</button>
                             </div>
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                 `;
 
                 accSelect.innerHTML += `<option value="${acc.name}">${acc.name}</option>`;
             });
 
-            // 2. Render Transaction Sheet
-            const ledgerBody = document.getElementById('ledgerBody');
-            ledgerBody.innerHTML = '';
+            // Render Grand Total Summary Row and Details Section
+            accSummaryBody.innerHTML = `
+                <tr style="background-color: #eef1f6; font-weight: bold; border-top: 2px solid #ccc;">
+                    <td>GRAND TOTAL</td>
+                    <td class="amt">₹${grandTotalOpening.toLocaleString('en-IN')}</td>
+                    <td class="amt" style="color: #d32f2f;">₹${grandTotalSpend.toLocaleString('en-IN')}</td>
+                    <td class="amt" style="color: ${grandTotalLive < 0 ? '#d32f2f' : '#217346'};">₹${grandTotalLive.toLocaleString('en-IN')}</td>
+                    <td style="text-align:right;">
+                        <button class="btn-details" onclick="toggleAccountDetails()">Details <span id="accArrow" class="arrow">▼</span></button>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="5" style="padding: 0;">
+                        <div id="accountDetailsDropdown" class="acc-details">
+                            ${individualAccountsHtml || '<div style="padding:10px; color:#777; text-align:center;">No accounts added yet.</div>'}
+                        </div>
+                    </td>
+                </tr>
+            `;
 
-            let sortedTxns = [...txns].reverse(); 
-            sortedTxns.forEach((t) => {
-                let originalIndex = txns.indexOf(t); 
-                let dateObj = new Date(t.date);
-                let dateStr = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-
-                ledgerBody.innerHTML += `
-                    <tr>
-                        <td>${dateStr}</td>
-                        <td>${t.purpose}</td>
-                        <td>${t.account}</td>
-                        <td class="amt">${parseFloat(t.moneyIn || 0) > 0 ? parseFloat(t.moneyIn).toLocaleString('en-IN') : '-'}</td>
-                        <td class="amt">${parseFloat(t.moneyOut || 0) > 0 ? parseFloat(t.moneyOut).toLocaleString('en-IN') : '-'}</td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="btn-edit" onclick="loadTransactionForEdit(${originalIndex})">Edit</button>
-                                <button class="btn-del" onclick="deleteTransaction(${originalIndex})">Del</button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            // 3. Render Month-wise Summary
             renderMonthlySummary(txns);
+        }
+
+        function toggleAccountDetails() {
+            const el = document.getElementById('accountDetailsDropdown');
+            const arrow = document.getElementById('accArrow');
+            el.classList.toggle('active');
+            arrow.classList.toggle('down');
         }
 
         function renderMonthlySummary(txns) {
@@ -189,15 +229,16 @@
             container.innerHTML = '';
 
             if (txns.length === 0) {
-                container.innerHTML = '<p style="color: #777; padding-left: 5px;">No transactions recorded yet.</p>';
+                container.innerHTML = '<p style="color: #777; padding: 15px; background: #fff; border-radius: 8px;">No transactions recorded yet.</p>';
                 return;
             }
 
+            let txnsWithIndex = txns.map((t, i) => ({ ...t, originalIndex: i }));
             const groupedData = {};
 
-            txns.forEach(t => {
+            txnsWithIndex.forEach(t => {
                 const dateObj = new Date(t.date);
-                const monthKey = dateObj.toLocaleString('en-IN', { month: 'short', year: 'numeric' }); 
+                const monthKey = dateObj.toLocaleString('en-IN', { month: 'long', year: 'numeric' }); 
                 
                 if (!groupedData[monthKey]) {
                     groupedData[monthKey] = { debit: 0, credit: 0, transactions: [] };
@@ -208,7 +249,10 @@
                 groupedData[monthKey].transactions.push(t);
             });
 
-            for (const [month, data] of Object.entries(groupedData).reverse()) {
+            const sortedMonths = Object.keys(groupedData).sort((a, b) => new Date(b) - new Date(a));
+
+            sortedMonths.forEach(month => {
+                const data = groupedData[month];
                 const card = document.createElement('div');
                 card.className = 'month-card';
 
@@ -240,8 +284,17 @@
                     
                     detailsHtml += `
                         <div class="txn-item">
-                            <span class="txn-info">${dateStr} | ${t.purpose} (${t.account})</span>
-                            <span style="color: ${color}; font-weight: bold;">${sign}₹${parseFloat(amount).toLocaleString('en-IN')}</span>
+                            <div class="txn-main">
+                                <span class="txn-date-acc">${dateStr} &bull; ${t.account}</span>
+                                <span class="txn-purpose">${t.purpose}</span>
+                            </div>
+                            <div class="txn-amount-actions">
+                                <span style="color: ${color}; font-weight: bold; font-size: 15px;">${sign}₹${parseFloat(amount).toLocaleString('en-IN')}</span>
+                                <div class="action-btns">
+                                    <button class="btn-edit" onclick="loadTransactionForEdit(${t.originalIndex})">Edit</button>
+                                    <button class="btn-del" onclick="deleteTransaction(${t.originalIndex})">Del</button>
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
@@ -256,7 +309,7 @@
                 card.appendChild(header);
                 card.appendChild(detailsDiv);
                 container.appendChild(card);
-            }
+            });
         }
 
         /* --- Account Functions --- */
@@ -325,7 +378,8 @@
             let saveBtn = document.getElementById('saveTxnBtn');
             saveBtn.innerText = 'Update Row';
             saveBtn.style.backgroundColor = '#1976d2';
-            window.scrollTo({ top: document.getElementById('ledgerTable').offsetTop - 20, behavior: 'smooth' });
+            
+            document.getElementById('entryFormSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function saveTransaction() {
@@ -349,15 +403,13 @@
             };
 
             if (editTxnIndex >= 0) {
-                // Update existing row
                 txns[editTxnIndex] = newTxnData;
-                editTxnIndex = -1; // Reset tracker
+                editTxnIndex = -1; 
                 
                 let saveBtn = document.getElementById('saveTxnBtn');
                 saveBtn.innerText = 'Save Row';
                 saveBtn.style.backgroundColor = '#217346';
             } else {
-                // Add new row
                 txns.push(newTxnData);
             }
 
@@ -371,12 +423,11 @@
         }
 
         function deleteTransaction(index) {
-            if(!confirm("Delete this row?")) return;
+            if(!confirm("Delete this transaction?")) return;
             let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
             txns.splice(index, 1);
             localStorage.setItem('xls_txns', JSON.stringify(txns));
             
-            // If deleting the row currently being edited, reset the form
             if(editTxnIndex === index) {
                 editTxnIndex = -1;
                 document.getElementById('entryPurpose').value = '';
@@ -391,7 +442,7 @@
             loadData();
         }
 
-        // Run on startup
+        // Initialize App
         loadData();
     </script>
 </body>
