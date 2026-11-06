@@ -37,6 +37,9 @@
         button { cursor: pointer; padding: 6px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; border: none; transition: 0.2s; }
         .btn-add { background: #217346; color: white; width: 100%; padding: 8px; }
         .btn-add:hover { background: #1a5c38; }
+
+        .btn-export { background: #008CBA; color: white; padding: 8px 15px; margin-bottom: 15px; display: inline-block; text-decoration: none; border-radius: 4px; font-weight: bold; }
+        .btn-export:hover { background: #007399; }
         
         .action-btns { display: flex; gap: 4px; justify-content: flex-end; }
         .btn-del { color: #d32f2f; background: #ffebee; padding: 4px 8px; font-size: 12px; }
@@ -77,6 +80,8 @@
     </style>
 </head>
 <body>
+
+    <button class="btn-export" onclick="exportToCSV()">Export Data to CSV</button>
 
     <h3>1. Accounts Summary</h3>
     <div class="table-container">
@@ -442,7 +447,32 @@
             loadData();
         }
 
-        // Initialize App
+        function exportToCSV() {
+            let txns = JSON.parse(localStorage.getItem('xls_txns')) || [];
+            if(txns.length === 0) return alert("No data to export!");
+
+            let csv = 'Date,Account,Purpose,Money In,Money Out\n';
+            txns.forEach(t => {
+                csv += `"${t.date}","${t.account}","${t.purpose.replace(/"/g, '""')}",${t.moneyIn},${t.moneyOut}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `ledger_backup_${new Date().toISOString().slice(0,10)}.csv`);
+            a.click();
+        }
+
+        // Initialize App & Service Worker for Offline Capability
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW failed', err));
+            });
+        }
+
         loadData();
     </script>
 </body>
